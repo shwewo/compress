@@ -8,7 +8,8 @@ const { v4: uuidv4 } = require("uuid");
 const { spawn } = require("child_process");
 const { exit } = require("process");
 
-const MAX_EXECUTION_TIME = 60 * 1000;
+const MAX_EXECUTION_TIME = 120 * 1000;
+const MAX_FILE_SIZE = 250 * 1000 * 1000;
 const AGE_LIMIT = 15 * 60 * 1000;
 
 const FFPROBE_PATH = process.env.FFPROBE_PATH || "ffprobe";
@@ -72,7 +73,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 200 * 1024 * 1024 },
+  limits: { fileSize: MAX_FILE_SIZE },
 });
 
 const store = {};
@@ -172,10 +173,10 @@ async function parseFfmpegTime(time) {
   });
 }
 
-async function ffmpegPass(uuid, duration, pass, videoCodec, videoBitrate, audioBitrate, inputFile, outputFile) {
+async function ffmpegPass(uuid, duration, pass, videoWidth, videoHeight, videoCodec, videoBitrate, audioBitrate, inputFile, outputFile) {
   return new Promise((resolve, reject) => {
-    const argsFirstPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-f", "mp4", "-pass", "1", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
-    const argsSecondPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-pass", "2", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
+    const argsFirstPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-f", "mp4", "-pass", "1", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
+    const argsSecondPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-pass", "2", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
 
     const ffmpeg = spawn(FFMPEG_PATH, pass == 1 ? argsFirstPass : argsSecondPass);
     let stderr = "";
@@ -191,11 +192,16 @@ async function ffmpegPass(uuid, duration, pass, videoCodec, videoBitrate, audioB
       for (const line of lines) {
         if (line.startsWith("out_time=")) {
           const outTime = line.split("=")[1].trim();
+          let progress;
 
           if (pass == 1) {
-            store[uuid].progress = Math.ceil((((await parseFfmpegTime(outTime)) / duration) * 100.0) / 2.0);
+            progress = Math.ceil((((await parseFfmpegTime(outTime)) / duration) * 100.0) / 2.0);
           } else {
-            store[uuid].progress = Math.ceil((((await parseFfmpegTime(outTime)) / duration) * 100.0) / 2.0 + 50);
+            progress = Math.ceil((((await parseFfmpegTime(outTime)) / duration) * 100.0) / 2.0 + 50);
+          }
+
+          if (!isNaN(progress)) {
+            store[uuid].progress = progress <= store[uuid].progress ? store[uuid].progress : progress;
           }
         }
       }
@@ -280,6 +286,7 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
   let targetSizeMB;
   let videoCodec;
   let ffprobeData;
+  let videoIndex;
   let videoFound = false;
   let audioFound = false;
   let audioBitrateKbps = 0.0;
@@ -334,11 +341,12 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
   }
 
   for (let i = 0; i < ffprobeData.streams.length; i++) {
-    if (ffprobeData.streams[i].codec_type == "video") {
+    if (ffprobeData.streams[i].codec_type == "video" && videoFound == false) {
       videoFound = true;
+      videoIndex = i;
     }
 
-    if (ffprobeData.streams[i].codec_type == "audio") {
+    if (ffprobeData.streams[i].codec_type == "audio" && audioFound == false) {
       audioFound = true;
       if (ffprobeData.streams[i].bit_rate) {
         audioBitrateKbps = Math.round(parseFloat(ffprobeData.streams[i].bit_rate) / 1000.0);
@@ -365,6 +373,8 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
     console.error(`${uuid}: Error while generating thumbnail ${err}`);
   }
 
+  const videoWidth = Math.round(parseFloat(ffprobeData.streams[videoIndex].width) / 2) * 2;
+  const videoHeight = Math.round(parseFloat(ffprobeData.streams[videoIndex].height) / 2) * 2;
   const durationSec = parseFloat(ffprobeData.format.duration);
   const targetSizeKilobits = targetSizeMB * 8000.0;
   const videoBitrateKbps = Math.round(targetSizeKilobits / durationSec - audioBitrateKbps);
@@ -391,8 +401,8 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
     const firstPassOutputFile = `${UPLOADS_DIR}/${path.basename(inputFile, path.extname(inputFile))}_1.mp4`;
     const secondPassOutputFile = `${UPLOADS_DIR}/${path.basename(inputFile, path.extname(inputFile))}_2.mp4`;
 
-    await ffmpegPass(uuid, durationSec, 1, videoCodec, videoBitrateKbps, audioBitrateKbps, inputFile, firstPassOutputFile);
-    await ffmpegPass(uuid, durationSec, 2, videoCodec, videoBitrateKbps, audioBitrateKbps, firstPassOutputFile, secondPassOutputFile);
+    await ffmpegPass(uuid, durationSec, 1, videoWidth, videoHeight, videoCodec, videoBitrateKbps, audioBitrateKbps, inputFile, firstPassOutputFile);
+    await ffmpegPass(uuid, durationSec, 2, videoWidth, videoHeight, videoCodec, videoBitrateKbps, audioBitrateKbps, firstPassOutputFile, secondPassOutputFile);
 
     store[uuid].progress = 100;
     store[uuid].status = "Done";
