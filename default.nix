@@ -13,8 +13,8 @@ in
 pkgs.stdenv.mkDerivation {
   inherit pname version;
 
-  nativeBuildInputs = with pkgs; [ ffmpeg nodejs ];
-  buildInputs = with pkgs; [ tailwindcss ];
+  nativeBuildInputs = [ ];
+  buildInputs = [ ];
 
   configurePhase = ''
     mkdir -p $out/bin
