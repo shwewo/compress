@@ -44,6 +44,7 @@
 
       <button id="uploadButton" class="h-10 w-24 border-2 border-green-400 text-white">Upload</button>
       <span class="hidden text-gray-400" id="statusText"></span>
+      <span class="hidden text-gray-700" id="transcodingStatusText"></span>
       <progress id="progressBar" class="hidden w-full [&::-moz-progress-bar]:bg-green-400 [&::-webkit-progress-bar]:bg-green-400 [&::-webkit-progress-value]:bg-green-400" value="0" max="100"></progress>
       <img class="hidden aspect-video max-h-80 max-w-80" id="thumbnail" src="" />
     </div>
@@ -53,6 +54,7 @@
       const uploadButton = document.getElementById("uploadButton");
       const progressBar = document.getElementById("progressBar");
       const statusText = document.getElementById("statusText");
+      const transcodingStatusText = document.getElementById("transcodingStatusText");
       const thumbnail = document.getElementById("thumbnail");
       ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
         dropArea.addEventListener(eventName, preventDefaults, false);
@@ -124,7 +126,9 @@
         uploadButton.style.display = "block";
         progressBar.style.display = "none";
         statusText.style.display = "none";
+        transcodingStatusText.style.display = "none";
         statusText.textContent = "";
+        transcodingStatusText.textContent = "";
         progressBar.value = 0;
         thumbnail.src = "";
         thumbnail.style.display = "none";
@@ -199,6 +203,8 @@
             if (xhr.status >= 200 && xhr.status < 300) {
               const result = JSON.parse(xhr.responseText);
               progressBar.value = result.progress;
+              transcodingStatusText.style.display = "block";
+              transcodingStatusText.textContent = `${result.left} seconds left`;
 
               if (result.status == "Done") {
                 clearState();

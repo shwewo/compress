@@ -158,21 +158,6 @@ async function createThumbnail(uuid, inputFile) {
   });
 }
 
-async function parseFfmpegTime(time) {
-  return new Promise((resolve) => {
-    try {
-      const timeParts = time.split(":");
-      const hours = parseInt(timeParts[0], 10);
-      const minutes = parseInt(timeParts[1], 10);
-      const seconds = parseFloat(timeParts[2]);
-      durationSeconds = hours * 3600.0 + minutes * 60.0 + seconds;
-      resolve(durationSeconds);
-    } catch (err) {
-      resolve(0.0);
-    }
-  });
-}
-
 async function ffmpegPass(uuid, duration, pass, videoWidth, videoHeight, videoCodec, videoBitrate, audioBitrate, inputFile, outputFile) {
   return new Promise((resolve, reject) => {
     const argsFirstPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-f", "mp4", "-pass", "1", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
@@ -190,18 +175,38 @@ async function ffmpegPass(uuid, duration, pass, videoWidth, videoHeight, videoCo
       const lines = data.toString().split("\n");
 
       for (const line of lines) {
-        if (line.startsWith("out_time=")) {
-          const outTime = line.split("=")[1].trim();
+        if (line.startsWith("out_time_ms=")) {
+          const outTimeRaw = line.split("=")[1].trim();
+          let outTime;
           let progress;
 
-          if (pass == 1) {
-            progress = Math.ceil((((await parseFfmpegTime(outTime)) / duration) * 100.0) / 2.0);
-          } else {
-            progress = Math.ceil((((await parseFfmpegTime(outTime)) / duration) * 100.0) / 2.0 + 50);
-          }
+          try {
+            outTime = parseFloat(outTimeRaw) / 1000 / 1000;
+            if (pass == 1) {
+              progress = Math.ceil(((outTime / duration) * 100.0) / 2.0);
+            } else {
+              progress = Math.ceil(((outTime / duration) * 100.0) / 2.0 + 50);
+            }
+          } catch (err) {}
 
-          if (!isNaN(progress)) {
+          if (progress && !isNaN(progress)) {
             store[uuid].progress = progress <= store[uuid].progress ? store[uuid].progress : progress;
+            store[uuid].outTime = outTime;
+          }
+        }
+
+        if (line.startsWith("speed=")) {
+          const speedRaw = line
+            .split("=")[1]
+            .trim()
+            .match(/(\d+(\.\d+)?)/g);
+
+          if (speedRaw) {
+            if (pass == 1) {
+              store[uuid].left = Math.round((duration - store[uuid].outTime) / speedRaw[0] + duration / speedRaw[0]);
+            } else {
+              store[uuid].left = Math.round((duration - store[uuid].outTime) / speedRaw[0]);
+            }
           }
         }
       }
@@ -390,6 +395,8 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
   store[uuid] = {
     status: "Transcoding",
     progress: 0,
+    left: 0,
+    outTime: 0,
     targetSize: targetSizeMB,
     videoBitrateKbps: videoBitrateKbps,
     audioBitrateKbps: audioBitrateKbps,
