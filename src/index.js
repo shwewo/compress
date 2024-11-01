@@ -174,8 +174,8 @@ async function parseFfmpegTime(time) {
 
 async function ffmpegPass(uuid, duration, pass, videoCodec, videoBitrate, audioBitrate, inputFile, outputFile) {
   return new Promise((resolve, reject) => {
-    const argsFirstPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-f", "mp4", "-pass", "1", "-passlogfile", `uploads/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
-    const argsSecondPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-pass", "2", "-passlogfile", `uploads/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
+    const argsFirstPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-f", "mp4", "-pass", "1", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
+    const argsSecondPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-pass", "2", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
 
     const ffmpeg = spawn(FFMPEG_PATH, pass == 1 ? argsFirstPass : argsSecondPass);
     let stderr = "";
