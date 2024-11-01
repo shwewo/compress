@@ -34,4 +34,8 @@ pkgs.stdenv.mkDerivation {
   '';
 
   dontUnpack = true;
+  
+  meta = {
+    platforms = [ "x86_64-linux" ];
+  };
 }
