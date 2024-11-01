@@ -7,7 +7,7 @@
     <link href="tailwind.css" rel="stylesheet" />
   </head>
   <body class="flex h-[100vh] w-[100vw] items-center justify-center bg-black">
-    <div id="dropArea" class="flex flex-col items-center justify-center gap-2 border-4 border-dashed border-gray-400 p-4 text-gray-500">
+    <div id="dropArea" class="flex max-w-96 flex-col items-center justify-center gap-2 border-4 border-dashed border-gray-400 p-4 text-gray-500">
       <span class="text-2xl text-white">Compress your video</span>
       <span class="text-lg text-gray-400">Drag & Drop here</span>
       <input class="max-w-64 text-gray-400" type="file" id="fileUpload" accept="video/*" autocomplete="off" />
@@ -46,7 +46,7 @@
       <span class="hidden text-gray-400" id="statusText"></span>
       <span class="hidden text-gray-700" id="transcodingStatusText"></span>
       <progress id="progressBar" class="hidden w-full [&::-moz-progress-bar]:bg-green-400 [&::-webkit-progress-bar]:bg-green-400 [&::-webkit-progress-value]:bg-green-400" value="0" max="100"></progress>
-      <img class="hidden aspect-video max-h-80 max-w-80" id="thumbnail" src="" />
+      <img class="hidden aspect-video max-w-full" id="thumbnail" src="" />
     </div>
     <script>
       const dropArea = document.getElementById("dropArea");
