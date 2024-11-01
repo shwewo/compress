@@ -18,7 +18,6 @@
         yarn2nix
       ];
     };
-    packages.default = import ./default.nix;
-    defaultPackage.x86_64-linux = self.packages.x86_64-linux.default;
+    packages.${system}.default = pkgs.callPackage ./default.nix {};
   };
 }
