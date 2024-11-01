@@ -56,6 +56,9 @@ const limiter = rateLimit({
   message: {
     error: "Too many requests from this IP, please try again later.",
   },
+  keyGenerator: function (req) {
+    return req.headers["cf-connecting-ip"] || req.ip;
+  },
 }); // 3 requests per minute
 
 const storage = multer.diskStorage({
