@@ -114,7 +114,8 @@
       function handleFiles(files) {
         if (files.length > 0) {
           const file = files[0];
-          if (file.type.startsWith("video/")) {
+          console.log(file.type);
+          if (file.type.startsWith("video/") || file.type.includes("gif")) {
             fileInput.files = files;
           } else {
             alert("Please upload a valid video file.");
