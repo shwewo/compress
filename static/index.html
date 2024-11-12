@@ -134,7 +134,7 @@
         thumbnail.src = "";
         thumbnail.style.display = "none";
         fileInput.value = "";
-        window.sessionStorage.removeItem("video");
+        window.localStorage.removeItem("video");
       }
 
       function initTranscodingState(uuid) {
@@ -160,7 +160,7 @@
               progressBar.value = result.progress;
               transcodingStatusText.style.display = "block";
               transcodingStatusText.textContent = `${result.left} seconds left`;
-              window.sessionStorage.setItem("video", uuid);
+              window.localStorage.setItem("video", uuid);
 
               if (result.status == "Done") {
                 clearState();
@@ -242,8 +242,8 @@
         xhr.send(formData);
       });
 
-      if (window.sessionStorage.getItem("video")) {
-        initTranscodingState(window.sessionStorage.getItem("video"));
+      if (window.localStorage.getItem("video")) {
+        initTranscodingState(window.localStorage.getItem("video"));
       }
     </script>
   </body>
