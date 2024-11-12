@@ -8,7 +8,7 @@ const { v4: uuidv4 } = require("uuid");
 const { spawn } = require("child_process");
 const { exit } = require("process");
 
-const MAX_EXECUTION_TIME = 120 * 1000;
+const MAX_EXECUTION_TIME = 300 * 1000;
 const MAX_FILE_SIZE = 250 * 1000 * 1000;
 const AGE_LIMIT = 15 * 60 * 1000;
 
@@ -230,10 +230,14 @@ async function ffmpegPass(uuid, duration, pass, videoWidth, videoHeight, videoCo
 app.get("/:file", async (req, res) => {
   if (req.params.file) {
     const uuid = path.basename(req.params.file, path.extname(req.params.file));
+
     const thumbnail = `${path.basename(req.params.file, path.extname(req.params.file))}.webp`;
     let filename;
 
     if (path.extname(req.params.file) == ".mp4") {
+      if (store[uuid] && store[uuid].status != "Done") {
+        return res.redirect("/");
+      }
       filename = `${path.basename(req.params.file, path.extname(req.params.file))}_2${path.extname(req.params.file)}`;
     } else {
       filename = req.params.file;
@@ -251,9 +255,7 @@ app.get("/:file", async (req, res) => {
     res.download(requestedPath, req.params.file, (err) => {
       if (err) {
         if (!res.headersSent) {
-          res.status(404).json({
-            error: "File not found",
-          });
+          res.redirect("/");
         }
       } else {
         if (path.extname(req.params.file) == ".mp4") {
@@ -264,9 +266,7 @@ app.get("/:file", async (req, res) => {
       }
     });
   } else {
-    res.status(400).json({
-      error: "Invalid UUID",
-    });
+    res.redirect("/");
   }
 });
 
