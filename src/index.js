@@ -376,7 +376,7 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
     }
   }
 
-  if (req.body.removeAudio) {
+  if (req.body.removeAudio === "true") {
     audioBitrateKbps = 0;
     removeAudio = true;
   }
