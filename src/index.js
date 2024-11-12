@@ -158,10 +158,18 @@ async function createThumbnail(uuid, inputFile) {
   });
 }
 
-async function ffmpegPass(uuid, duration, pass, videoWidth, videoHeight, videoCodec, videoBitrate, audioBitrate, inputFile, outputFile) {
+async function ffmpegPass(uuid, duration, pass, videoWidth, videoHeight, videoCodec, videoBitrate, audioBitrate, removeAudio, inputFile, outputFile) {
   return new Promise((resolve, reject) => {
-    const argsFirstPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-f", "mp4", "-pass", "1", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
-    const argsSecondPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-pass", "2", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
+    let argsFirstPass;
+    let argsSecondPass;
+
+    if (removeAudio) {
+      argsFirstPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-preset", "medium", "-f", "mp4", "-pass", "1", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-an", outputFile];
+      argsSecondPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-preset", "medium", "-pass", "2", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-an", outputFile];
+    } else {
+      argsFirstPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-f", "mp4", "-pass", "1", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
+      argsSecondPass = ["-v", "error", "-progress", "-", "-y", "-i", inputFile, "-vf", `scale=${videoWidth}:${videoHeight}`, "-c:v", videoCodec, "-c:a", "libopus", "-preset", "medium", "-pass", "2", "-passlogfile", `${UPLOADS_DIR}/${uuid}.log`, "-b:v", `${videoBitrate}k`, "-b:a", `${audioBitrate}k`, outputFile];
+    }
 
     const ffmpeg = spawn(FFMPEG_PATH, pass == 1 ? argsFirstPass : argsSecondPass);
     let stderr = "";
@@ -292,10 +300,12 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
   let videoCodec;
   let ffprobeData;
   let videoIndex;
+  let currentFileSizeMB;
+  let uuid;
   let videoFound = false;
   let audioFound = false;
+  let removeAudio = false;
   let audioBitrateKbps = 0.0;
-  let uuid;
 
   if (req.file) {
     inputFile = req.file.path;
@@ -329,7 +339,8 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
     });
   }
 
-  const currentFileSizeMB = Math.round(fs.statSync(inputFile).size / (1000.0 * 1000.0));
+  currentFileSizeMB = Math.round(fs.statSync(inputFile).size / (1000.0 * 1000.0));
+
   if (currentFileSizeMB <= targetSizeMB) {
     return res.status(400).json({
       error: `File size is lower than target size: ${currentFileSizeMB}MB`,
@@ -365,6 +376,11 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
     }
   }
 
+  if (req.body.removeAudio) {
+    audioBitrateKbps = 0;
+    removeAudio = true;
+  }
+
   if (!videoFound) {
     console.error(`${uuid}: No video streams found`);
     return res.status(400).json({
@@ -382,7 +398,7 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
   const videoHeight = Math.round(parseFloat(ffprobeData.streams[videoIndex].height) / 2) * 2;
   const durationSec = parseFloat(ffprobeData.format.duration);
   const targetSizeKilobits = targetSizeMB * 8000.0;
-  const videoBitrateKbps = Math.round(targetSizeKilobits / durationSec - audioBitrateKbps);
+  const videoBitrateKbps = Math.round(targetSizeKilobits / durationSec - (removeAudio ? 0 : audioBitrateKbps));
 
   if (videoBitrateKbps <= 384.0) {
     console.error(`${uuid}: Unrealistic video bitrate ${videoBitrateKbps} kbps`);
@@ -408,8 +424,8 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
     const firstPassOutputFile = `${UPLOADS_DIR}/${path.basename(inputFile, path.extname(inputFile))}_1.mp4`;
     const secondPassOutputFile = `${UPLOADS_DIR}/${path.basename(inputFile, path.extname(inputFile))}_2.mp4`;
 
-    await ffmpegPass(uuid, durationSec, 1, videoWidth, videoHeight, videoCodec, videoBitrateKbps, audioBitrateKbps, inputFile, firstPassOutputFile);
-    await ffmpegPass(uuid, durationSec, 2, videoWidth, videoHeight, videoCodec, videoBitrateKbps, audioBitrateKbps, firstPassOutputFile, secondPassOutputFile);
+    await ffmpegPass(uuid, durationSec, 1, videoWidth, videoHeight, videoCodec, videoBitrateKbps, audioBitrateKbps, removeAudio, inputFile, firstPassOutputFile);
+    await ffmpegPass(uuid, durationSec, 2, videoWidth, videoHeight, videoCodec, videoBitrateKbps, audioBitrateKbps, removeAudio, firstPassOutputFile, secondPassOutputFile);
 
     store[uuid].progress = 100;
     store[uuid].status = "Done";

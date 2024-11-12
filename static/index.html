@@ -21,6 +21,10 @@
           <input type="radio" name="videoCodec" value="libx265" class="mr-2" />
           <span class="text-gray-700">H265</span>
         </label>
+        <label class="flex items-center">
+          <input type="checkbox" name="removeAudio" class="mr-2" value="false" autocomplete="off" />
+          <span class="text-gray-700">Remove audio</span>
+        </label>
       </div>
 
       <div class="flex flex-row gap-2">
@@ -199,6 +203,7 @@
         formData.append("video", file);
         formData.append("targetSize", document.querySelector('input[name="targetSize"]:checked').value);
         formData.append("videoCodec", document.querySelector('input[name="videoCodec"]:checked').value);
+        formData.append("removeAudio", document.querySelector('input[name="removeAudio"]').checked);
 
         uploadButton.style.display = "none";
         statusText.style.display = "block";
