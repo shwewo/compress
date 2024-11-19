@@ -394,8 +394,16 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
     console.error(`${uuid}: Error while generating thumbnail ${err}`);
   }
 
-  const videoWidth = Math.round(parseFloat(ffprobeData.streams[videoIndex].width) / 2) * 2;
-  const videoHeight = Math.round(parseFloat(ffprobeData.streams[videoIndex].height) / 2) * 2;
+  let videoRotation = 0;
+  try {
+    videoRotation = Math.round(parseFloat(ffprobeData.streams[videoIndex].side_data_list[0].rotation));
+  } catch (err) {}
+
+  const videoRadians = videoRotation * (Math.PI / 180);
+  const intermediateVideoWidth = Math.round(parseFloat(ffprobeData.streams[videoIndex].width) / 2) * 2;
+  const intermediatevideoHeight = Math.round(parseFloat(ffprobeData.streams[videoIndex].height) / 2) * 2;
+  const videoWidth = Math.abs(intermediateVideoWidth * Math.cos(videoRadians)) + Math.abs(intermediatevideoHeight * Math.sin(videoRadians));
+  const videoHeight = Math.abs(intermediateVideoWidth * Math.sin(videoRadians)) + Math.abs(intermediatevideoHeight * Math.cos(videoRadians));
   const durationSec = parseFloat(ffprobeData.format.duration);
   const targetSizeKilobits = targetSizeMB * 8000.0;
   const videoBitrateKbps = Math.round(targetSizeKilobits / durationSec - (removeAudio ? 0 : audioBitrateKbps));
