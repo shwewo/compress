@@ -229,7 +229,7 @@
               const result = JSON.parse(xhr.responseText);
               alert(`Upload failed: ${result.error}`);
             } catch (err) {
-              alert("Upload failed: Unknown error");
+              alert(`Upload failed: ${err}`);
             }
           }
         };
@@ -240,7 +240,7 @@
             const result = JSON.parse(xhr.responseText);
             alert(`Upload failed: ${result.error}`);
           } catch (err) {
-            alert("Upload failed: Unknown error");
+            alert(`Upload failed: ${err}`);
           }
         };
 
