@@ -9,7 +9,7 @@ const { spawn } = require("child_process");
 const { exit } = require("process");
 
 const MAX_EXECUTION_TIME = 300 * 1000;
-const MAX_FILE_SIZE = 250 * 1000 * 1000;
+const MAX_FILE_SIZE = 1000 * 1000 * 1000;
 const AGE_LIMIT = 15 * 60 * 1000;
 
 const FFPROBE_PATH = process.env.FFPROBE_PATH || "ffprobe";
@@ -407,13 +407,6 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
   const durationSec = parseFloat(ffprobeData.format.duration);
   const targetSizeKilobits = targetSizeMB * 8000.0;
   const videoBitrateKbps = Math.round(targetSizeKilobits / durationSec - (removeAudio ? 0 : audioBitrateKbps));
-
-  if (videoBitrateKbps <= 384.0) {
-    console.error(`${uuid}: Unrealistic video bitrate ${videoBitrateKbps} kbps`);
-    return res.status(500).json({
-      error: `Unrealistic video bitrate ${videoBitrateKbps} kbps`,
-    });
-  }
 
   console.log(`${uuid}: Target size ${targetSizeMB}MB Calculated video bitrate ${videoBitrateKbps} kbps Audio bitrate ${audioBitrateKbps} kbps`);
   store[uuid] = {
