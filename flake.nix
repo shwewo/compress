@@ -4,7 +4,7 @@
   };
 
   outputs = { self, nixpkgs }: let
-    system = "x86_64-linux";
+    system = "aarch64-darwin";
     pkgs = import nixpkgs {
       inherit system;
     };
@@ -12,6 +12,7 @@
     devShells.${system}.default = pkgs.mkShell {
       name = "compress";
       packages = with pkgs; [
+        ffmpeg
         nodejs
         tailwindcss
         yarn

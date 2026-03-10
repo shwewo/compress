@@ -16,6 +16,7 @@ const FFPROBE_PATH = process.env.FFPROBE_PATH || "ffprobe";
 const FFMPEG_PATH = process.env.FFMPEG_PATH || "ffmpeg";
 const LOGIN = process.env.LOGIN || "user";
 const PASSWORD = process.env.PASSWORD || "password";
+const LISTEN_IP = process.env.LISTEN_IP || "127.0.0.1";
 const PORT = process.env.PORT || 3000;
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.resolve(process.cwd(), "uploads");
 let STATIC_PATH = process.env.STATIC_PATH;
@@ -443,7 +444,7 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
 deleteOldFiles();
 setInterval(deleteOldFiles, 10 * 60 * 1000);
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server is running on http://0.0.0.0:${PORT}`);
+app.listen(PORT, LISTEN_IP, () => {
+  console.log(`Server is running on http://${LISTEN_IP}:${PORT}`);
   console.log(`Uploads directory ${UPLOADS_DIR}`);
 });

@@ -36,6 +36,6 @@ pkgs.stdenv.mkDerivation {
   dontUnpack = true;
   
   meta = {
-    platforms = [ "x86_64-linux" ];
+    platforms = [ "x86_64-linux" "aarch64-darwin" ];
   };
 }
