@@ -1,4 +1,4 @@
-{ pkgs ? (import <nixpkgs> {}).pkgs }:
+{ pkgs, lib, ... }:
 let
   pname = "compress";
   version = (builtins.fromJSON (builtins.readFile ./package.json)).version;
@@ -36,6 +36,6 @@ pkgs.stdenv.mkDerivation {
   dontUnpack = true;
   
   meta = {
-    platforms = [ "x86_64-linux" "aarch64-darwin" ];
+    platforms = lib.platforms.all;
   };
 }
