@@ -37,5 +37,6 @@ pkgs.stdenv.mkDerivation {
   
   meta = {
     platforms = lib.platforms.all;
+    mainProgram = "compress";
   };
 }
