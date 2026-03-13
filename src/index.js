@@ -14,24 +14,26 @@ const AGE_LIMIT = 15 * 60 * 1000;
 
 const FFPROBE_PATH = process.env.FFPROBE_PATH || "ffprobe";
 const FFMPEG_PATH = process.env.FFMPEG_PATH || "ffmpeg";
-const LOGIN = process.env.LOGIN || "user";
-const PASSWORD = process.env.PASSWORD || "password";
+const LOGIN = process.env.LOGIN || "admin";
+const PASSWORD = process.env.PASSWORD || "admin";
 const LISTEN_IP = process.env.LISTEN_IP || "127.0.0.1";
 const PORT = process.env.PORT || 3000;
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.resolve(process.cwd(), "uploads");
 let STATIC_PATH = process.env.STATIC_PATH;
 
-if (!process.env.LOGIN && !process.env.PASSWORD) {
-  console.warn("Warning, using default credentials: `user:password`");
+if (process.env.AUTH && !process.env.LOGIN && !process.env.PASSWORD) {
+  console.warn("Warning, using default credentials: `admin:admin`");
 }
 
 const app = express();
-app.use(
-  basicAuth({
-    users: { [LOGIN]: PASSWORD },
-    challenge: true,
-  }),
-);
+if (process.env.AUTH) {
+  app.use(
+    basicAuth({
+      users: { [LOGIN]: PASSWORD },
+      challenge: true,
+    }),
+  ); 
+}
 
 if (!STATIC_PATH) {
   const staticVariant1 = path.resolve(path.dirname(__filename), "static");
