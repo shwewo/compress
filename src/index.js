@@ -447,8 +447,8 @@ deleteOldFiles();
 setInterval(deleteOldFiles, 10 * 60 * 1000);
 
 if (PORT == 0) {
-  fs.chmodSync(LISTEN_IP, 0o666);
   app.listen(LISTEN_IP, () => {
+    fs.chmodSync(LISTEN_IP, 0o666);
     console.log(`Server is running on unix://${LISTEN_IP}`);
     console.log(`Uploads directory ${UPLOADS_DIR}`);
   });
