@@ -446,7 +446,14 @@ app.post("/api/transcode", limiter, upload.single("video"), async (req, res) => 
 deleteOldFiles();
 setInterval(deleteOldFiles, 10 * 60 * 1000);
 
-app.listen(PORT, LISTEN_IP, () => {
-  console.log(`Server is running on http://${LISTEN_IP}:${PORT}`);
-  console.log(`Uploads directory ${UPLOADS_DIR}`);
-});
+if (PORT == 0) {
+  app.listen(LISTEN_IP, () => {
+    console.log(`Server is running on unix://${LISTEN_IP}`);
+    console.log(`Uploads directory ${UPLOADS_DIR}`);
+  });
+} else {
+  app.listen(PORT, LISTEN_IP, () => {
+    console.log(`Server is running on http://${LISTEN_IP}:${PORT}`);
+    console.log(`Uploads directory ${UPLOADS_DIR}`);
+  });
+}
